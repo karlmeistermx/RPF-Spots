@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0d1f0f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>RPF Spots — Pesca GDL</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg:#0d1f0f; --bg2:#152718; --bg3:#1c3320;
+      --green:#2ecc71; --green2:#27ae60;
+      --text:#e8f5e9; --text2:#a5c8a8; --text3:#6a9e6e;
+      --border:rgba(46,204,113,.15); --border2:rgba(46,204,113,.3);
+      --r:10px; --head:'Barlow Condensed',sans-serif; --body:'Barlow',sans-serif;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+    body{font-family:var(--body);background:var(--bg);color:var(--text);min-height:100vh;max-width:430px;margin:0 auto;}
+
+    #auth{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;}
+    .auth-fish{font-size:72px;margin-bottom:24px;}
+    .auth-brand{font-family:var(--head);font-size:12px;font-weight:600;letter-spacing:.2em;color:var(--green);text-transform:uppercase;margin-bottom:6px;}
+    .auth-title{font-family:var(--head);font-size:40px;font-weight:700;line-height:1;margin-bottom:4px;}
+    .auth-sub{font-size:14px;color:var(--text3);margin-bottom:48px;}
+    .btn-google{display:flex;align-items:center;justify-content:center;gap:12px;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);font-family:var(--body);font-size:15px;font-weight:500;padding:14px 28px;border-radius:var(--r);cursor:pointer;width:100%;}
+    .btn-google:active{background:var(--bg2);}
+
+    #app{display:none;padding-bottom:68px;}
+
+    .topbar{background:var(--bg2);border-bottom:0.5px solid var(--border);padding:11px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+    .topbar-brand{font-family:var(--head);font-size:18px;font-weight:700;letter-spacing:.03em;}
+    .topbar-brand span{color:var(--green);}
+    .auto-pills{display:flex;gap:5px;}
+    .pill{font-size:11px;background:var(--bg3);border:0.5px solid var(--border);color:var(--text2);padding:3px 8px;border-radius:20px;}
+
+    .bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:var(--bg2);border-top:0.5px solid var(--border);display:flex;z-index:10;}
+    .bnav-btn{flex:1;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;border:none;background:transparent;cursor:pointer;color:var(--text3);font-family:var(--body);font-size:10px;}
+    .bnav-btn.active{color:var(--green);}
+    .bnav-btn .ni{font-size:20px;}
+
+    .screen{display:none;padding:16px;}
+    .screen.active{display:block;}
+    .sec-title{font-family:var(--head);font-size:12px;font-weight:600;letter-spacing:.12em;color:var(--text3);text-transform:uppercase;margin-bottom:14px;}
+
+    .photo-area{background:var(--bg3);border:1.5px dashed var(--border2);border-radius:var(--r);height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;margin-bottom:14px;position:relative;overflow:hidden;}
+    .photo-area img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+    .photo-overlay{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;}
+    .photo-overlay .pi{font-size:32px;}
+    .photo-overlay .pt{font-size:13px;color:var(--text2);}
+    .photo-overlay .ps{font-size:11px;color:var(--text3);}
+    input[type=file]{display:none;}
+
+    .auto-bar{display:flex;gap:6px;margin-bottom:10px;}
+    .ai{flex:1;background:var(--bg3);border:0.5px solid var(--border);border-radius:8px;padding:8px 4px;text-align:center;}
+    .ai .av{font-size:13px;font-weight:500;}
+    .ai .al{font-size:10px;color:var(--text3);margin-top:2px;}
+
+    .gps-status{font-size:11px;color:var(--text3);margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+    .gps-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0;}
+    .gps-dot.ok{background:var(--green);}
+
+    .flabel{display:block;font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;}
+
+    input[type=text]{width:100%;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);font-family:var(--body);font-size:14px;padding:10px 12px;border-radius:8px;margin-bottom:12px;}
+    input[type=text]::placeholder{color:var(--text3);}
+    input[type=text]:focus{outline:none;border-color:var(--green);}
+
+    select{width:100%;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);font-family:var(--body);font-size:14px;padding:10px 12px;border-radius:8px;margin-bottom:12px;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236a9e6e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;}
+    select:focus{outline:none;border-color:var(--green);}
+    select option{background:var(--bg2);}
+
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+    .row2 select{margin-bottom:0;}
+
+    .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+    .chip{font-size:12px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--border2);color:var(--text2);background:transparent;cursor:pointer;font-family:var(--body);transition:all .1s;}
+    .chip.on{background:var(--green);color:#0d1f0f;border-color:var(--green);font-weight:500;}
+
+    .btn-primary{width:100%;padding:14px;background:var(--green);color:#0d1f0f;font-family:var(--head);font-size:16px;font-weight:700;letter-spacing:.05em;border:none;border-radius:var(--r);cursor:pointer;text-transform:uppercase;}
+    .btn-primary:active{background:var(--green2);}
+    .btn-primary:disabled{background:var(--bg3);color:var(--text3);cursor:not-allowed;}
+
+    .fcard{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);margin-bottom:12px;overflow:hidden;}
+    .fcard-head{padding:10px 12px;display:flex;align-items:center;gap:10px;}
+    .avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--head);font-size:13px;font-weight:700;background:var(--bg3);color:var(--green);flex-shrink:0;}
+    .fcard-meta{flex:1;min-width:0;}
+    .fcard-user{font-size:13px;font-weight:500;}
+    .fcard-spot{font-size:12px;color:var(--green);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .fcard-time{font-size:11px;color:var(--text3);white-space:nowrap;}
+    .fcard-photo{width:100%;max-height:300px;object-fit:cover;display:block;cursor:pointer;}
+    .fcard-nophoto{width:100%;height:100px;display:flex;align-items:center;justify-content:center;font-size:48px;background:var(--bg3);}
+    .fcard-tags{padding:10px 12px;display:flex;flex-wrap:wrap;gap:5px;}
+    .ftag{font-size:11px;padding:3px 8px;border-radius:10px;border:0.5px solid var(--border);color:var(--text3);}
+    .ftag-g{background:rgba(46,204,113,.1);color:#2ecc71;border-color:rgba(46,204,113,.3);}
+    .ftag-b{background:rgba(52,152,219,.1);color:#5dade2;border-color:rgba(52,152,219,.3);}
+    .fcard-maplink{display:flex;align-items:center;gap:6px;margin:0 12px 10px;padding:8px 10px;background:var(--bg3);border-radius:8px;border:0.5px solid var(--border);text-decoration:none;font-size:12px;color:var(--green);}
+    .fcard-foot{padding:8px 12px;border-top:0.5px solid var(--border);display:flex;align-items:center;}
+    .btn-like{background:transparent;border:none;color:var(--text3);font-family:var(--body);font-size:12px;cursor:pointer;padding:4px 0;}
+    .btn-like.liked{color:var(--green);}
+    .like-count{font-size:11px;color:var(--text3);margin-left:auto;}
+    .feed-empty{text-align:center;padding:48px 16px;color:var(--text3);font-size:14px;}
+
+    .mcard{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);margin-bottom:8px;overflow:hidden;}
+    .mcard a{display:block;text-decoration:none;}
+    .mcard-body{padding:10px 12px;}
+    .mcard-name{font-family:var(--head);font-size:15px;font-weight:600;color:var(--text);}
+    .mcard-meta{font-size:11px;color:var(--text3);margin-top:3px;}
+    .mcard-thumb{width:100%;height:90px;object-fit:cover;display:block;}
+
+    .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:100;display:none;align-items:center;justify-content:center;}
+    .lightbox.open{display:flex;}
+    .lightbox img{max-width:100%;max-height:100vh;object-fit:contain;}
+    .lightbox-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:20px;width:40px;height:40px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+    .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:#0d1f0f;font-size:13px;font-weight:500;padding:10px 20px;border-radius:20px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:200;}
+    .toast.show{opacity:1;}
+  </style>
+</head>
+<body>
+
+<div id="auth">
+  <div class="auth-fish">🎣</div>
+  <div class="auth-brand">Rodríguez Pro Fishing</div>
+  <div class="auth-title">Spots GDL</div>
+  <div class="auth-sub">La comunidad de pesca de Guadalajara</div>
+  <button class="btn-google" onclick="loginGoogle()">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908C16.658 14.013 17.64 11.706 17.64 9.2z" fill="#4285F4"/>
+      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+      <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+    </svg>
+    Entrar con Google
+  </button>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-brand">RPF <span>Spots</span></div>
+    <div class="auto-pills">
+      <span class="pill" id="pill-w">...</span>
+      <span class="pill" id="pill-m">...</span>
+    </div>
+  </div>
+
+  <div id="s-checkin" class="screen active">
+    <div class="sec-title">Nueva captura</div>
+    <div class="photo-area" id="photo-area" onclick="document.getElementById('file-in').click()">
+      <input type="file" id="file-in" accept="image/*" capture="environment" onchange="handlePhoto(this)">
+      <div class="photo-overlay" id="photo-overlay">
+        <div class="pi">📷</div>
+        <div class="pt">Toma la foto ahora</div>
+        <div class="ps">captura + señuelo en la misma foto</div>
+      </div>
+    </div>
+    <div class="auto-bar">
+      <div class="ai"><div class="av" id="a-temp">—</div><div class="al">temp</div></div>
+      <div class="ai"><div class="av" id="a-wx">—</div><div class="al">clima</div></div>
+      <div class="ai"><div class="av" id="a-moon">—</div><div class="al">luna</div></div>
+      <div class="ai"><div class="av" id="a-time">—</div><div class="al">hora</div></div>
+    </div>
+    <div class="gps-status"><div class="gps-dot" id="gps-dot"></div><span id="gps-label">Obteniendo ubicación...</span></div>
+    <label class="flabel">📍 Nombre del lugar</label>
+    <input type="text" id="inp-spot" placeholder="Ej: Calderón — zona vanchuy" maxlength="60">
+    <div class="row2">
+      <div>
+        <label class="flabel">🐟 Especie</label>
+        <select id="sel-sp">
+          <option value="">Selecciona...</option>
+          <option>Lobina</option><option>Carpa</option><option>Tilapia</option>
+          <option>Trucha</option><option>Bagre</option><option>Sin captura</option>
+        </select>
+      </div>
+      <div>
+        <label class="flabel">📏 Tamaño</label>
+        <select id="sel-sz">
+          <option value="">Selecciona...</option>
+          <option>Pequeña</option><option>Mediana</option><option>Grande</option><option>Trofeo</option>
+        </select>
+      </div>
+    </div>
+    <label class="flabel">🪝 Señuelo</label>
+    <div class="chips" id="lure-chips">
+      <button class="chip" onclick="this.classList.toggle('on')">Spinner</button>
+      <button class="chip" onclick="this.classList.toggle('on')">Jig</button>
+      <button class="chip" onclick="this.classList.toggle('on')">Crankbait</button>
+      <button class="chip" onclick="this.classList.toggle('on')">Gusano</button>
+      <button class="chip" onclick="this.classList.toggle('on')">Carnada viva</button>
+      <button class="chip" onclick="this.classList.toggle('on')">Topwater</button>
+      <button class="chip" onclick="this.classList.toggle('on')">Mosca seca</button>
+      <button class="chip" onclick="this.classList.toggle('on')">Cuchara</button>
+      <button class="chip" onclick="this.classList.toggle('on')">Pan de pez</button>
+    </div>
+    <button class="btn-primary" id="btn-post" onclick="submitCheckin()">Publicar captura</button>
+  </div>
+
+  <div id="s-feed" class="screen">
+    <div class="sec-title">Capturas recientes</div>
+    <div id="feed-list"><div class="feed-empty">Cargando...</div></div>
+  </div>
+
+  <div id="s-mapa" class="screen">
+    <div class="sec-title">Spots con capturas</div>
+    <div id="mapa-list"><div class="feed-empty">Cargando...</div></div>
+  </div>
+
+  <nav class="bnav">
+    <button class="bnav-btn active" onclick="nav('checkin')"><span class="ni">🎣</span>Check-in</button>
+    <button class="bnav-btn" onclick="nav('feed')"><span class="ni">📋</span>Feed</button>
+    <button class="bnav-btn" onclick="nav('mapa')"><span class="ni">🗺️</span>Mapa</button>
+  </nav>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close">✕</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://fmcogacsylfoupmzmbhu.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_6cKExTnEFg81SL7F4vAbvA_6_-AMBZ3';
+const WEATHER_KEY  = 'e24af89baeaeb3baacf071e9a2b379e4';
+const REDIRECT_URL = 'https://rpf-spots.vercel.app';
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let user = null, wx = {}, photo = null, userPos = null;
+let likedPosts = new Set(JSON.parse(localStorage.getItem('liked') || '[]'));
+
+async function loginGoogle() {
+  await db.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: REDIRECT_URL } });
+}
+
+async function initAuth() {
+  const { data:{ session } } = await db.auth.getSession();
+  if (session) { user = session.user; showApp(); }
+  db.auth.onAuthStateChange(function(_e,s){ if(s){ user=s.user; showApp(); } });
+}
+
+function showApp() {
+  document.getElementById('auth').style.display = 'none';
+  document.getElementById('app').style.display  = 'block';
+  init();
+}
+
+async function init() {
+  tickTime();
+  setInterval(tickTime, 60000);
+  setMoon();
+  getLocation();
+  nav(localStorage.getItem('lastTab') || 'checkin');
+}
+
+function tickTime() {
+  var now = new Date();
+  document.getElementById('a-time').textContent =
+    now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+}
+
+function moonPhase(date) {
+  var age = (((date - new Date(2000,0,6)) / 86400000) % 29.53 + 29.53) % 29.53;
+  if (age < 1.85)  return {n:'Nueva',       e:'🌑'};
+  if (age < 7.38)  return {n:'Creciente',   e:'🌒'};
+  if (age < 9.22)  return {n:'C. creciente',e:'🌓'};
+  if (age < 14.77) return {n:'Gibosa',      e:'🌔'};
+  if (age < 16.61) return {n:'Llena',       e:'🌕'};
+  if (age < 22.15) return {n:'G. menguante',e:'🌖'};
+  if (age < 23.99) return {n:'C. menguante',e:'🌗'};
+  return                  {n:'Menguante',   e:'🌘'};
+}
+
+function setMoon() {
+  var p = moonPhase(new Date());
+  document.getElementById('a-moon').textContent    = p.e;
+  document.getElementById('pill-m').textContent    = p.e + ' ' + p.n;
+}
+
+function wxIcon(main) {
+  return ({Clear:'☀️',Clouds:'⛅',Rain:'🌧️',Drizzle:'🌦️',Thunderstorm:'⛈️',Snow:'❄️',Mist:'🌫️',Fog:'🌫️',Haze:'🌫️'})[main] || '🌤';
+}
+
+function getLocation() {
+  if (!navigator.geolocation) { setGps(false,'GPS no disponible'); return; }
+  setGps(false,'Obteniendo ubicación...');
+  navigator.geolocation.getCurrentPosition(
+    function(pos) {
+      userPos = {lat: pos.coords.latitude, lng: pos.coords.longitude};
+      setGps(true, 'Ubicación obtenida ✓');
+      loadWeather(pos.coords.latitude, pos.coords.longitude);
+    },
+    function() { setGps(false, 'No se pudo obtener ubicación'); },
+    {timeout:10000}
+  );
+}
+
+function setGps(ok, msg) {
+  document.getElementById('gps-dot').className   = 'gps-dot' + (ok ? ' ok' : '');
+  document.getElementById('gps-label').textContent = msg;
+}
+
+async function loadWeather(lat, lon) {
+  try {
+    var r = await fetch('https://api.openweathermap.org/data/2.5/weather?lat='+lat+'&lon='+lon+'&appid='+WEATHER_KEY+'&units=metric&lang=es');
+    var d = await r.json();
+    var temp = Math.round(d.main.temp);
+    var icon = wxIcon(d.weather[0].main);
+    wx = {temp:temp, main:d.weather[0].main, icon:icon};
+    document.getElementById('a-temp').textContent   = temp + '°';
+    document.getElementById('a-wx').textContent     = icon;
+    document.getElementById('pill-w').textContent   = icon + ' ' + temp + '°';
+  } catch(e) {}
+}
+
+function handlePhoto(input) {
+  var file = input.files[0];
+  if (!file) return;
+  photo = file;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var area = document.getElementById('photo-area');
+    var img  = area.querySelector('img');
+    if (!img) { img = document.createElement('img'); area.insertBefore(img, area.firstChild); }
+    img.src = e.target.result;
+    document.getElementById('photo-overlay').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function openLightbox(src) {
+  document.getElementById('lightbox-img').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+async function submitCheckin() {
+  var spotName = document.getElementById('inp-spot').value.trim();
+  var species  = document.getElementById('sel-sp').value;
+  if (!spotName) { toast('Escribe el nombre del lugar'); return; }
+  if (!species)  { toast('Selecciona la especie'); return; }
+  if (!photo)    { toast('Toma una foto primero'); return; }
+
+  var btn = document.getElementById('btn-post');
+  btn.disabled = true; btn.textContent = 'Publicando...';
+
+  var lures = Array.from(document.querySelectorAll('#lure-chips .chip.on')).map(function(c){ return c.textContent; });
+  var size  = document.getElementById('sel-sz').value;
+  var moon  = moonPhase(new Date());
+
+  var photoUrl = null;
+  var ext  = photo.name.split('.').pop();
+  var path = user.id + '/' + Date.now() + '.' + ext;
+  var upRes = await db.storage.from('catches').upload(path, photo);
+  if (!upRes.error) {
+    var urlData = db.storage.from('catches').getPublicUrl(path);
+    photoUrl = urlData.data.publicUrl;
+  }
+
+  var res = await db.from('checkins').insert({
+    user_id:    user.id,
+    user_name:  (user.user_metadata && user.user_metadata.full_name) || user.email.split('@')[0] || 'Pescador',
+    spot_name:  spotName,
+    species:    species,
+    size:       size || null,
+    lures:      lures.length ? lures : null,
+    photo_url:  photoUrl,
+    temp:       wx.temp || null,
+    weather:    wx.main || null,
+    moon_phase: moon.n,
+    lat:        userPos ? userPos.lat : null,
+    lng:        userPos ? userPos.lng : null,
+    likes:      0
+  });
+
+  btn.disabled = false; btn.textContent = 'Publicar captura';
+
+  if (!res.error) {
+    toast('Captura publicada 🎣');
+    resetForm();
+    nav('feed');
+  } else {
+    toast('Error al publicar');
+    console.error(res.error);
+  }
+}
+
+function resetForm() {
+  document.getElementById('inp-spot').value = '';
+  document.getElementById('sel-sp').value   = '';
+  document.getElementById('sel-sz').value   = '';
+  document.querySelectorAll('#lure-chips .chip.on').forEach(function(c){ c.classList.remove('on'); });
+  photo = null;
+  var area = document.getElementById('photo-area');
+  var img  = area.querySelector('img');
+  if (img) img.remove();
+  document.getElementById('photo-overlay').style.display = 'flex';
+  document.getElementById('file-in').value = '';
+}
+
+async function loadFeed() {
+  var res = await db.from('checkins').select('*').order('created_at', {ascending:false}).limit(40);
+  var el  = document.getElementById('feed-list');
+  if (!res.data || !res.data.length) {
+    el.innerHTML = '<div class="feed-empty">Sin capturas aún.<br>¡Sé el primero en publicar!</div>';
+    return;
+  }
+  el.innerHTML = res.data.map(function(c) {
+    var spotName  = c.spot_name || 'Spot';
+    var init      = (c.user_name||'P').split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+    var ago       = timeAgo(new Date(c.created_at));
+    var liked     = likedPosts.has(c.id);
+    var isOwn     = c.user_id === (user && user.id);
+    var luresTags = (c.lures||[]).map(function(l){return '<span class="ftag ftag-b">'+l+'</span>';}).join('');
+    var tempTag   = c.temp       ? '<span class="ftag">'+c.temp+'°C</span>' : '';
+    var moonTag   = c.moon_phase ? '<span class="ftag">🌙 '+c.moon_phase+'</span>' : '';
+    var wxTag     = c.weather    ? '<span class="ftag">'+wxIcon(c.weather)+'</span>' : '';
+    var delBtn    = isOwn ? '<button onclick="deleteCheckin(\''+c.id+'\')" style="background:transparent;border:none;color:var(--text3);font-size:18px;cursor:pointer;line-height:1;padding:0 2px">🗑</button>' : '';
+    var photoHtml = c.photo_url
+      ? '<img class="fcard-photo" src="'+c.photo_url+'" loading="lazy" onclick="openLightbox(\''+c.photo_url+'\')">'
+      : '<div class="fcard-nophoto">🐟</div>';
+    var mapHtml = (c.lat && c.lng)
+      ? '<a class="fcard-maplink" href="https://www.google.com/maps?q='+c.lat+','+c.lng+'" target="_blank">📍 Ver ubicación en mapa</a>'
+      : '';
+    return '<div class="fcard" id="card-'+c.id+'">'
+      +'<div class="fcard-head">'
+        +'<div class="avatar">'+init+'</div>'
+        +'<div class="fcard-meta">'
+          +'<div class="fcard-user">'+(c.user_name||'Pescador')+'</div>'
+          +'<div class="fcard-spot">📍 '+spotName+'</div>'
+        +'</div>'
+        +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
+          +'<div class="fcard-time">'+ago+'</div>'+delBtn
+        +'</div>'
+      +'</div>'
+      +photoHtml
+      +mapHtml
+      +'<div class="fcard-tags">'
+        +'<span class="ftag ftag-g">'+c.species+(c.size?' · '+c.size:'')+'</span>'
+        +luresTags+tempTag+moonTag+wxTag
+      +'</div>'
+      +'<div class="fcard-foot">'
+        +'<button class="btn-like '+(liked?'liked':'')+'" onclick="like(\''+c.id+'\',this)">👍 Útil</button>'
+        +'<span class="like-count" id="lc-'+c.id+'">'+(c.likes||0)+' útil</span>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+async function deleteCheckin(id) {
+  if (!confirm('¿Borrar esta captura?')) return;
+  var res = await db.from('checkins').delete().eq('id',id).eq('user_id',user.id);
+  if (!res.error) {
+    var card = document.getElementById('card-'+id);
+    if (card) card.remove();
+    toast('Captura borrada');
+  } else { toast('Error al borrar'); }
+}
+
+async function like(id, btn) {
+  var liked = likedPosts.has(id);
+  if (liked) {
+    likedPosts.delete(id);
+    btn.classList.remove('liked');
+    var r = await db.from('checkins').select('likes').eq('id',id).single();
+    var n = Math.max((r.data && r.data.likes||1)-1, 0);
+    await db.from('checkins').update({likes:n}).eq('id',id);
+    var el = document.getElementById('lc-'+id);
+    if (el) el.textContent = n+' útil';
+  } else {
+    likedPosts.add(id);
+    btn.classList.add('liked');
+    var r2 = await db.from('checkins').select('likes').eq('id',id).single();
+    var n2 = (r2.data && r2.data.likes||0)+1;
+    await db.from('checkins').update({likes:n2}).eq('id',id);
+    var el2 = document.getElementById('lc-'+id);
+    if (el2) el2.textContent = n2+' útil';
+  }
+  localStorage.setItem('liked', JSON.stringify(Array.from(likedPosts)));
+}
+
+async function loadMapa() {
+  var res = await db.from('checkins').select('*').not('lat','is',null).order('created_at',{ascending:false}).limit(50);
+  var el  = document.getElementById('mapa-list');
+  if (!res.data || !res.data.length) {
+    el.innerHTML = '<div class="feed-empty">Sin capturas con ubicación aún.<br>Publica tu primera captura.</div>';
+    return;
+  }
+  el.innerHTML = res.data.map(function(c) {
+    var spotName = c.spot_name || 'Spot';
+    var ago = timeAgo(new Date(c.created_at));
+    var mapUrl = 'https://www.google.com/maps?q='+c.lat+','+c.lng;
+    return '<div class="mcard">'
+      +'<a href="'+mapUrl+'" target="_blank">'
+        +'<div class="mcard-body">'
+          +'<div class="mcard-name">📍 '+spotName+'</div>'
+          +'<div class="mcard-meta">'+c.species+' · '+(c.user_name||'Pescador')+' · '+ago+'</div>'
+        +'</div>'
+      +'</a>'
+      +'</div>';
+  }).join('');
+}
+
+function timeAgo(d) {
+  var s = (Date.now()-d)/1000;
+  if (s<60)    return 'ahora';
+  if (s<3600)  return 'hace '+Math.floor(s/60)+'min';
+  if (s<86400) return 'hace '+Math.floor(s/3600)+'h';
+  return 'hace '+Math.floor(s/86400)+'d';
+}
+
+function nav(screen) {
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  document.querySelectorAll('.bnav-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.getElementById('s-'+screen).classList.add('active');
+  ['checkin','feed','mapa'].forEach(function(s,i){
+    if (s===screen) document.querySelectorAll('.bnav-btn')[i].classList.add('active');
+  });
+  localStorage.setItem('lastTab', screen);
+  if (screen==='feed') loadFeed();
+  if (screen==='mapa') loadMapa();
+}
+
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+
+initAuth();
+</script>
+</body>
+</html>
